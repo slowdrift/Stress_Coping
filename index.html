@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#f4f1ea">
+<title>コーピング</title>
+<style>
+  :root{
+    --bg:#f4f1ea;
+    --card:#fffdf8;
+    --ink:#4a443a;
+    --ink-soft:#8a8275;
+    --line:#e6e0d4;
+    --accent:#7a9e7e;
+    --accent-soft:#eaf1ea;
+    --highlight:#fdf3e0;
+    --highlight-ink:#b07d3a;
+    --danger:#c07b6b;
+    --radius:14px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#211f1b;
+      --card:#2b2823;
+      --ink:#e8e3d8;
+      --ink-soft:#9a9285;
+      --line:#3a362f;
+      --accent:#8fb893;
+      --accent-soft:#33403425;
+      --highlight:#3a3225;
+      --highlight-ink:#d9a85e;
+      --danger:#d18f7f;
+    }
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{font-size:16px}
+  body{
+    font-family:"Hiragino Maru Gothic ProN","Hiragino Kaku Gothic ProN","Yu Gothic",system-ui,sans-serif;
+    background:var(--bg);color:var(--ink);
+    min-height:100vh;
+    padding-bottom:80px;
+    line-height:1.5;
+  }
+  header{
+    padding:18px 18px 10px;
+    display:flex;justify-content:space-between;align-items:baseline;
+  }
+  header h1{font-size:1.15rem;font-weight:700;letter-spacing:.05em}
+  header .date{font-size:.8rem;color:var(--ink-soft)}
+
+  /* scene filter */
+  .scenes{
+    display:flex;gap:8px;padding:4px 18px 14px;overflow-x:auto;
+  }
+  .scenes button{
+    border:1px solid var(--line);background:var(--card);color:var(--ink-soft);
+    border-radius:999px;padding:7px 16px;font-size:.85rem;font-family:inherit;
+    white-space:nowrap;cursor:pointer;transition:all .15s;
+  }
+  .scenes button.active{
+    background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;
+  }
+
+  /* usage hint */
+  .hint-bar{
+    margin:0 18px 12px;padding:11px 14px;
+    background:var(--accent-soft);border:1px solid var(--accent);
+    border-radius:12px;font-size:.8rem;color:var(--ink);line-height:1.6;
+    display:flex;gap:10px;align-items:flex-start;
+  }
+  .hint-bar .x{
+    margin-left:auto;border:none;background:none;color:var(--ink-soft);
+    font-size:1rem;cursor:pointer;padding:0 2px;font-family:inherit;flex-shrink:0;
+  }
+  .legend{
+    font-size:.72rem;color:var(--ink-soft);padding:0 6px 10px;
+  }
+
+  main{padding:0 14px}
+  .cat{margin-bottom:12px}
+  .cat h2{
+    font-size:.78rem;color:var(--ink-soft);font-weight:700;
+    padding:4px 4px;letter-spacing:.1em;
+  }
+  .item{
+    background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:9px 13px;margin-bottom:5px;
+    display:flex;align-items:center;gap:11px;
+    cursor:pointer;transition:transform .1s, background .2s;
+    position:relative;overflow:hidden;
+  }
+  .item:active{transform:scale(.985)}
+  .item .name{flex:1;font-size:.95rem;line-height:1.35}
+  .item .ago{font-size:.72rem;color:var(--ink-soft);white-space:nowrap}
+  .item.fresh-hl{
+    background:var(--highlight);border-color:#e8d6b3;
+  }
+  .item.fresh-hl .ago{color:var(--highlight-ink);font-weight:700}
+  .item.done-today{
+    background:var(--accent-soft);border-color:var(--accent);
+  }
+  .item.done-today .ago{color:var(--accent);font-weight:700}
+  .check{
+    width:22px;height:22px;border-radius:50%;
+    border:2px solid var(--line);flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    font-size:.75rem;color:transparent;transition:all .2s;
+  }
+  .item.done-today .check{background:var(--accent);border-color:var(--accent);color:#fff}
+
+  /* hidden category toggle */
+  .toggle-hidden{
+    width:100%;border:none;background:none;color:var(--ink-soft);
+    font-size:.8rem;padding:10px;font-family:inherit;cursor:pointer;
+  }
+
+  /* tabs */
+  nav{
+    position:fixed;bottom:0;left:0;right:0;
+    background:var(--card);border-top:1px solid var(--line);
+    display:flex;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  nav button{
+    flex:1;border:none;background:none;font-family:inherit;
+    padding:12px 0 10px;font-size:.75rem;color:var(--ink-soft);cursor:pointer;
+  }
+  nav button .ico{display:block;font-size:1.25rem;margin-bottom:2px}
+  nav button.active{color:var(--accent);font-weight:700}
+
+  /* toast */
+  #toast{
+    position:fixed;bottom:84px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:var(--bg);padding:10px 20px;border-radius:999px;
+    font-size:.85rem;opacity:0;pointer-events:none;transition:all .25s;
+    display:flex;gap:14px;align-items:center;white-space:nowrap;z-index:50;
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+  #toast button{
+    border:none;background:none;color:var(--highlight-ink);font-family:inherit;
+    font-weight:700;font-size:.85rem;cursor:pointer;
+  }
+
+  /* review */
+  .panel{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px;margin:0 0 12px;
+  }
+  .panel h3{font-size:.85rem;color:var(--ink-soft);margin-bottom:12px;letter-spacing:.08em}
+  .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:9px;font-size:.85rem}
+  .bar-row .label{width:9em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bar-row .bar{height:10px;border-radius:5px;background:var(--accent);min-width:4px}
+  .bar-row .num{color:var(--ink-soft);font-size:.78rem}
+  .stat-big{font-size:1.8rem;font-weight:700;color:var(--accent)}
+  .stat-sub{font-size:.8rem;color:var(--ink-soft)}
+  .empty{color:var(--ink-soft);font-size:.85rem;text-align:center;padding:24px 0}
+
+  /* edit */
+  .edit-item{
+    display:flex;align-items:center;gap:8px;
+    background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:10px 12px;margin-bottom:6px;font-size:.9rem;
+  }
+  .edit-item .name{flex:1}
+  .edit-item .movesel{
+    border:1px solid var(--line);border-radius:8px;padding:5px 6px;
+    font-family:inherit;font-size:.78rem;background:var(--bg);color:var(--ink);
+    max-width:8em;
+  }
+  .edit-item button{
+    border:1px solid var(--line);background:none;font-size:.78rem;cursor:pointer;
+    color:var(--ink-soft);padding:5px 9px;font-family:inherit;border-radius:8px;
+  }
+  .edit-item button.del{color:var(--danger);border-color:var(--danger)}
+  .add-row{display:flex;gap:8px;margin:10px 0 18px}
+  .add-row input{
+    flex:1;border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+    font-family:inherit;font-size:.95rem;background:var(--card);color:var(--ink);
+  }
+  .add-row select{
+    border:1px solid var(--line);border-radius:10px;padding:0 8px;
+    font-family:inherit;background:var(--card);color:var(--ink);font-size:.85rem;
+  }
+  .add-row button{
+    border:none;background:var(--accent);color:#fff;border-radius:10px;
+    padding:0 18px;font-family:inherit;font-weight:700;cursor:pointer;
+  }
+  .io-row{display:flex;gap:10px;margin-top:8px}
+  .io-row button,.io-row label{
+    flex:1;text-align:center;border:1px solid var(--line);background:var(--card);
+    color:var(--ink);border-radius:10px;padding:11px;font-size:.85rem;
+    font-family:inherit;cursor:pointer;
+  }
+  .view{display:none;animation:fade .25s}
+  .view.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>コーピング</h1>
+  <span class="date" id="today"></span>
+</header>
+
+<!-- ===== リスト ===== -->
+<div class="view active" id="view-list">
+  <div class="scenes" id="scenes"></div>
+  <div id="hint-host"></div>
+  <main id="list"></main>
+</div>
+
+<!-- ===== ふりかえり ===== -->
+<div class="view" id="view-review">
+  <main id="review"></main>
+</div>
+
+<!-- ===== 編集 ===== -->
+<div class="view" id="view-edit">
+  <main id="edit"></main>
+</div>
+
+<nav>
+  <button class="active" data-view="list"><span class="ico">🌿</span>リスト</button>
+  <button data-view="review"><span class="ico">📊</span>ふりかえり</button>
+  <button data-view="edit"><span class="ico">✏️</span>編集</button>
+</nav>
+
+<div id="toast"><span id="toast-msg"></span><button id="toast-undo">取り消す</button></div>
+
+<script>
+(function(){
+"use strict";
+const LS_KEY = "copingAppV1";
+
+/* scene: w=職場OK, h=家, o=外出 */
+const DEFAULT_DATA = {
+  categories: ["習慣","身体","趣味","環境","外出","有償","今は難しいもの"],
+  items: [
+    {id:"i01",name:"青竹を踏む",cat:"習慣",scenes:["h"]},
+    {id:"i02",name:"AOTAKE体操",cat:"習慣",scenes:["h"]},
+    {id:"i03",name:"と思ってみた法",cat:"習慣",scenes:["w","h","o"]},
+    {id:"i04",name:"瞑想",cat:"習慣",scenes:["h"]},
+    {id:"i05",name:"深呼吸",cat:"習慣",scenes:["w","h","o"]},
+    {id:"i06",name:"呼吸法",cat:"習慣",scenes:["w","h","o"]},
+    {id:"i07",name:"指を押す",cat:"習慣",scenes:["w","h","o"]},
+    {id:"i08",name:"ストレス把握",cat:"習慣",scenes:["w","h"]},
+    {id:"i09",name:"日記を書く",cat:"習慣",scenes:["h"]},
+    {id:"i10",name:"昼寝（コーヒーナップ）",cat:"習慣",scenes:["h"]},
+    {id:"i11",name:"早く寝る",cat:"習慣",scenes:["h"]},
+    {id:"i12",name:"ストレッチ（YouTube）",cat:"身体",scenes:["h"]},
+    {id:"i13",name:"マッサージ（頭・首・胸・手・足裏）",cat:"身体",scenes:["w","h"]},
+    {id:"i14",name:"耳を引っ張る",cat:"身体",scenes:["w","h","o"]},
+    {id:"i15",name:"カッサを使う",cat:"身体",scenes:["h"]},
+    {id:"i16",name:"筋トレ（腕立て・スクワット・四股・アブローラー）",cat:"身体",scenes:["h"]},
+    {id:"i17",name:"サプリを飲む",cat:"身体",scenes:["h"]},
+    {id:"i18",name:"読書（本・マンガ）",cat:"趣味",scenes:["h","o"]},
+    {id:"i19",name:"映画",cat:"趣味",scenes:["h"]},
+    {id:"i20",name:"アニメ",cat:"趣味",scenes:["h"]},
+    {id:"i21",name:"歌う",cat:"趣味",scenes:["h"]},
+    {id:"i22",name:"お笑い",cat:"趣味",scenes:["h"]},
+    {id:"i23",name:"音楽を聴く",cat:"環境",scenes:["w","h","o"]},
+    {id:"i24",name:"自然音を聴く",cat:"環境",scenes:["w","h","o"]},
+    {id:"i25",name:"自然の映像を流す",cat:"環境",scenes:["w","h"]},
+    {id:"i26",name:"植物にふれる",cat:"環境",scenes:["w","h","o"]},
+    {id:"i27",name:"散歩",cat:"外出",scenes:["w","o"]},
+    {id:"i28",name:"ランニング",cat:"外出",scenes:["o"]},
+    {id:"i29",name:"サイクリング",cat:"外出",scenes:["o"]},
+    {id:"i30",name:"庭仕事",cat:"外出",scenes:["o"]},
+    {id:"i31",name:"車を洗う",cat:"外出",scenes:["o"]},
+    {id:"i32",name:"自転車を洗う",cat:"外出",scenes:["o"]},
+    {id:"i33",name:"弓道",cat:"外出",scenes:["o"]},
+    {id:"i34",name:"本屋に行く",cat:"外出",scenes:["o"]},
+    {id:"i35",name:"図書館に行く",cat:"外出",scenes:["o"]},
+    {id:"i36",name:"ホームセンターに行く",cat:"外出",scenes:["o"]},
+    {id:"i37",name:"整体",cat:"有償",scenes:["o"]},
+    {id:"i38",name:"サウナ",cat:"有償",scenes:["o"]},
+    {id:"i39",name:"カフェに行く",cat:"有償",scenes:["o"]},
+    {id:"i40",name:"移動する",cat:"今は難しいもの",scenes:["o"]},
+    {id:"i41",name:"水泳",cat:"今は難しいもの",scenes:["o"]},
+    {id:"i42",name:"誰かと話す",cat:"今は難しいもの",scenes:["w","h","o"]},
+    {id:"i43",name:"ゲームをする",cat:"今は難しいもの",scenes:["h"]}
+  ],
+  logs: []   // {itemId, ts}
+};
+
+let state = load();
+let scene = "all";      // all | w | h | o
+let showHidden = false;
+let lastLog = null;     // for undo
+let toastTimer = null;
+
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){
+      const d = JSON.parse(raw);
+      if(d && Array.isArray(d.items)) return d;
+    }
+  }catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULT_DATA));
+}
+function save(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+  catch(e){ alert("保存に失敗しました。容量を確認してください。"); }
+}
+
+/* ---------- date utils ---------- */
+function dayStr(ts){
+  const d = new Date(ts);
+  return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();
+}
+function daysAgo(ts){
+  const a = new Date(); a.setHours(0,0,0,0);
+  const b = new Date(ts); b.setHours(0,0,0,0);
+  return Math.round((a-b)/86400000);
+}
+function lastLogOf(itemId){
+  let last = null;
+  for(const l of state.logs){
+    if(l.itemId===itemId && (!last || l.ts>last)) last = l.ts;
+  }
+  return last;
+}
+function agoLabel(itemId){
+  const last = lastLogOf(itemId);
+  if(last===null) return {text:"まだ記録なし", cls:""};
+  const d = daysAgo(last);
+  if(d===0) return {text:"今日 ✓", cls:"done-today"};
+  if(d===1) return {text:"昨日", cls:""};
+  if(d>=10) return {text:d+"日ぶり ✨", cls:"fresh-hl"};
+  return {text:d+"日前", cls:""};
+}
+
+/* ---------- usage hint (first run) ---------- */
+function renderHint(){
+  const host = document.getElementById("hint-host");
+  host.innerHTML = "";
+  if(localStorage.getItem("copingHintDone")) return;
+  const bar = document.createElement("div");
+  bar.className = "hint-bar";
+  bar.innerHTML =
+    '<span>💡 <b>使い方</b><br>'+
+    '・項目を<b>タップ</b>すると「やった」が記録されます<br>'+
+    '・上のボタンで<b>場面</b>（職場・家・外出）を絞り込めます<br>'+
+    '・<b>✨ ○日ぶり</b>は、しばらくやっていないものの目印です</span>'+
+    '<button class="x" title="閉じる">✕</button>';
+  bar.querySelector(".x").onclick = ()=>{
+    localStorage.setItem("copingHintDone","1");
+    renderHint();
+  };
+  host.appendChild(bar);
+}
+
+/* ---------- render: list ---------- */
+const SCENES = [["all","すべて"],["w","🏢 職場"],["h","🏠 家"],["o","🚶 外出"]];
+
+function renderScenes(){
+  const el = document.getElementById("scenes");
+  el.innerHTML = "";
+  for(const [key,label] of SCENES){
+    const b = document.createElement("button");
+    b.textContent = label;
+    if(scene===key) b.classList.add("active");
+    b.onclick = ()=>{ scene=key; renderScenes(); renderList(); };
+    el.appendChild(b);
+  }
+}
+
+function renderList(){
+  const root = document.getElementById("list");
+  root.innerHTML = "";
+  for(const cat of state.categories){
+    const isHiddenCat = (cat==="今は難しいもの");
+    if(isHiddenCat && !showHidden){ continue; }
+    const items = state.items.filter(it=>
+      it.cat===cat && (scene==="all" || (it.scenes||[]).includes(scene))
+    );
+    if(items.length===0) continue;
+    const sec = document.createElement("div");
+    sec.className = "cat";
+    const h = document.createElement("h2");
+    h.textContent = "【"+cat+"】";
+    sec.appendChild(h);
+    for(const it of items){
+      const a = agoLabel(it.id);
+      const div = document.createElement("div");
+      div.className = "item "+a.cls;
+      div.innerHTML =
+        '<div class="check">✓</div>'+
+        '<div class="name"></div>'+
+        '<div class="ago"></div>';
+      div.querySelector(".name").textContent = it.name;
+      div.querySelector(".ago").textContent = a.text;
+      div.onclick = ()=>recordLog(it);
+      sec.appendChild(div);
+    }
+    root.appendChild(sec);
+  }
+  // toggle hidden
+  const t = document.createElement("button");
+  t.className = "toggle-hidden";
+  t.textContent = showHidden ? "「今は難しいもの」を隠す ▲" : "「今は難しいもの」も見る ▼";
+  t.onclick = ()=>{ showHidden=!showHidden; renderList(); };
+  root.appendChild(t);
+}
+
+/* ---------- record + undo ---------- */
+function recordLog(item){
+  const log = {itemId:item.id, ts:Date.now()};
+  state.logs.push(log);
+  lastLog = log;
+  save();
+  renderList();
+  showToast("「"+item.name+"」 やった ✓");
+}
+function showToast(msg){
+  const t = document.getElementById("toast");
+  document.getElementById("toast-msg").textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove("show"), 4000);
+}
+document.getElementById("toast-undo").onclick = ()=>{
+  if(lastLog){
+    const i = state.logs.indexOf(lastLog);
+    if(i>=0) state.logs.splice(i,1);
+    lastLog = null;
+    save(); renderList();
+  }
+  document.getElementById("toast").classList.remove("show");
+};
+
+/* ---------- render: review ---------- */
+function renderReview(){
+  const root = document.getElementById("review");
+  root.innerHTML = "";
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const prevStart  = new Date(now.getFullYear(), now.getMonth()-1, 1).getTime();
+
+  const thisMonth = state.logs.filter(l=>l.ts>=monthStart).length;
+  const prevMonth = state.logs.filter(l=>l.ts>=prevStart && l.ts<monthStart).length;
+
+  // panel: counts
+  const p1 = document.createElement("div");
+  p1.className = "panel";
+  p1.innerHTML = '<h3>今月の記録</h3>'+
+    '<span class="stat-big">'+thisMonth+'</span> <span class="stat-sub">回'+
+    (prevMonth>0 ? '（先月 '+prevMonth+' 回）':'')+'</span>';
+  root.appendChild(p1);
+
+  // panel: top 5
+  const counts = {};
+  for(const l of state.logs) counts[l.itemId]=(counts[l.itemId]||0)+1;
+  const ranked = Object.entries(counts)
+    .map(([id,n])=>({item:state.items.find(i=>i.id===id), n}))
+    .filter(r=>r.item)
+    .sort((a,b)=>b.n-a.n).slice(0,5);
+
+  const p2 = document.createElement("div");
+  p2.className = "panel";
+  p2.innerHTML = '<h3>よく使うコーピング</h3>';
+  if(ranked.length===0){
+    p2.innerHTML += '<div class="empty">記録が貯まるとここに表示されます 🌱</div>';
+  }else{
+    const max = ranked[0].n;
+    for(const r of ranked){
+      const row = document.createElement("div");
+      row.className = "bar-row";
+      row.innerHTML = '<span class="label"></span><div class="bar"></div><span class="num"></span>';
+      row.querySelector(".label").textContent = r.item.name;
+      row.querySelector(".bar").style.width = Math.max(8, r.n/max*45)+"%";
+      row.querySelector(".num").textContent = r.n+"回";
+      p2.appendChild(row);
+    }
+  }
+  root.appendChild(p2);
+
+  // panel: not recently used (30d+)
+  const stale = state.items.filter(it=>{
+    if(it.cat==="今は難しいもの") return false;
+    const last = lastLogOf(it.id);
+    return last!==null && daysAgo(last)>=30;
+  });
+  if(stale.length>0){
+    const p3 = document.createElement("div");
+    p3.className = "panel";
+    p3.innerHTML = '<h3>30日以上やっていないもの</h3>';
+    for(const it of stale){
+      const d = document.createElement("div");
+      d.style.cssText = "font-size:.9rem;padding:4px 0;color:var(--ink-soft)";
+      d.textContent = "・"+it.name+"（"+daysAgo(lastLogOf(it.id))+"日）";
+      p3.appendChild(d);
+    }
+    const note = document.createElement("div");
+    note.style.cssText = "font-size:.75rem;color:var(--ink-soft);margin-top:8px";
+    note.textContent = "合わなくなったものは、編集画面で整理できます";
+    p3.appendChild(note);
+    root.appendChild(p3);
+  }
+}
+
+/* ---------- render: edit ---------- */
+function renderEdit(){
+  const root = document.getElementById("edit");
+  root.innerHTML = "";
+
+  // intro
+  const intro = document.createElement("div");
+  intro.style.cssText="font-size:.78rem;color:var(--ink-soft);padding:4px 4px 12px;line-height:1.6";
+  intro.textContent = "コーピングの追加・カテゴリ変更・削除ができます。下のバックアップで、機種変更やデータ消失にも備えられます。";
+  root.appendChild(intro);
+
+  // add form
+  const add = document.createElement("div");
+  add.className = "add-row";
+  add.innerHTML = '<input type="text" placeholder="新しいコーピングを追加" maxlength="40">'+
+    '<select></select><button>追加</button>';
+  const sel = add.querySelector("select");
+  for(const c of state.categories){
+    const o = document.createElement("option");
+    o.value = c; o.textContent = c;
+    sel.appendChild(o);
+  }
+  add.querySelector("button").onclick = ()=>{
+    const input = add.querySelector("input");
+    const name = input.value.trim();
+    if(!name) return;
+    state.items.push({
+      id:"u"+Date.now(),
+      name, cat:sel.value,
+      scenes:["w","h","o"]
+    });
+    input.value="";
+    save(); renderEdit(); renderList();
+  };
+  root.appendChild(add);
+
+  // items by category
+  for(const cat of state.categories){
+    const items = state.items.filter(i=>i.cat===cat);
+    if(items.length===0) continue;
+    const h = document.createElement("h2");
+    h.style.cssText="font-size:.8rem;color:var(--ink-soft);padding:8px 4px;letter-spacing:.1em";
+    h.textContent = "【"+cat+"】";
+    root.appendChild(h);
+    for(const it of items){
+      const row = document.createElement("div");
+      row.className = "edit-item";
+      row.innerHTML = '<span class="name"></span>'+
+        '<select class="movesel" title="カテゴリを変更"></select>'+
+        '<button class="del" title="削除">削除</button>';
+      row.querySelector(".name").textContent = it.name;
+      const msel = row.querySelector(".movesel");
+      for(const c of state.categories){
+        const o = document.createElement("option");
+        o.value = c; o.textContent = c;
+        if(c===it.cat) o.selected = true;
+        msel.appendChild(o);
+      }
+      msel.onchange = ()=>{
+        it.cat = msel.value;
+        save(); renderEdit(); renderList();
+      };
+      row.querySelector(".del").onclick = ()=>{
+        if(confirm("「"+it.name+"」を削除しますか？（記録も消えます）")){
+          state.items = state.items.filter(x=>x.id!==it.id);
+          state.logs = state.logs.filter(l=>l.itemId!==it.id);
+          save(); renderEdit(); renderList();
+        }
+      };
+      root.appendChild(row);
+    }
+  }
+
+  // hint + io
+  const hint = document.createElement("div");
+  hint.style.cssText="font-size:.72rem;color:var(--ink-soft);margin:14px 4px 4px;line-height:1.6";
+  hint.textContent = "右側のメニューでカテゴリを変更できます。「今は難しいもの」に移すと、リスト画面では非表示になります。";
+  root.appendChild(hint);
+
+  const io = document.createElement("div");
+  io.className = "io-row";
+  const exp = document.createElement("button");
+  exp.textContent = "📤 バックアップ";
+  exp.onclick = ()=>{
+    const blob = new Blob([JSON.stringify(state,null,1)],{type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "coping-backup-"+dayStr(Date.now())+".json";
+    a.click();
+  };
+  const impLabel = document.createElement("label");
+  impLabel.textContent = "📥 復元";
+  const impInput = document.createElement("input");
+  impInput.type="file"; impInput.accept=".json"; impInput.style.display="none";
+  impInput.onchange = (e)=>{
+    const f = e.target.files[0];
+    if(!f) return;
+    const r = new FileReader();
+    r.onload = ()=>{
+      try{
+        const d = JSON.parse(r.result);
+        if(d && Array.isArray(d.items) && Array.isArray(d.logs)){
+          if(confirm("現在のデータを上書きして復元しますか？")){
+            state = d; save();
+            renderList(); renderEdit();
+            alert("復元しました");
+          }
+        }else alert("ファイル形式が正しくありません");
+      }catch(err){ alert("読み込みに失敗しました"); }
+    };
+    r.readAsText(f);
+  };
+  impLabel.appendChild(impInput);
+  io.appendChild(exp); io.appendChild(impLabel);
+  root.appendChild(io);
+}
+
+/* ---------- tabs ---------- */
+document.querySelectorAll("nav button").forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));
+    document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    document.getElementById("view-"+b.dataset.view).classList.add("active");
+    if(b.dataset.view==="review") renderReview();
+    if(b.dataset.view==="edit") renderEdit();
+    window.scrollTo(0,0);
+  };
+});
+
+/* ---------- init ---------- */
+const now = new Date();
+const wd = ["日","月","火","水","木","金","土"][now.getDay()];
+document.getElementById("today").textContent =
+  (now.getMonth()+1)+"/"+now.getDate()+" ("+wd+")";
+renderHint();
+renderScenes();
+renderList();
+})();
+</script>
+</body>
+</html>
